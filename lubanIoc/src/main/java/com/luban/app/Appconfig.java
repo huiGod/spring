@@ -1,14 +1,11 @@
 package com.luban.app;
 
-import com.luban.anno.EanbleLuabn;
-import com.luban.dao.Dao;
-import com.luban.dao.IndexDao;
-import com.luban.dao.IndexDao1;
-import com.luban.imports.MyImportSelector;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+
+//import com.luban.imports.MyImportSelector;
 @ComponentScan({"com.luban"})
 @Configuration
-
 public class Appconfig {
 
 //	@Bean
