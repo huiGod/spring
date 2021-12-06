@@ -47,6 +47,8 @@ import org.springframework.util.Assert;
  */
 public class AnnotatedBeanDefinitionReader {
 
+
+	//BeanDefinition的注册器
 	private final BeanDefinitionRegistry registry;
 
 	private BeanNameGenerator beanNameGenerator = new AnnotationBeanNameGenerator();
@@ -95,7 +97,9 @@ public class AnnotatedBeanDefinitionReader {
 //		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 //		Assert.notNull(environment, "Environment must not be null");
 		this.registry = registry;
+		//处理Conditional注解
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+		//注册注解相关的 post 处理器
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}
 
