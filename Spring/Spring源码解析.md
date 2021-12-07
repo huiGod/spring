@@ -137,7 +137,9 @@ public class AnnotatedBeanDefinitionReader {
 }
 ```
 
-注册注解相关的 post 处理器
+注册注解相关的 post 处理器，这里都是一些 spring 内置的 BeanDefinition，用来给 spring 工厂提供额外的能力
+
+ConfigurationClassPostProcessor和AutowiredAnnotationBeanPostProcessor是比较重要的
 
 ```java
 public static void registerAnnotationConfigProcessors(BeanDefinitionRegistry registry) {
@@ -163,17 +165,20 @@ public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
 
   Set<BeanDefinitionHolder> beanDefs = new LinkedHashSet<>(8);
   //BeanDefinitio的注册，这里很重要，需要理解注册每个bean的类型
+  //org.springframework.context.annotation.internalConfigurationAnnotationProcessor
   if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
     //需要注意的是ConfigurationClassPostProcessor的类型是BeanDefinitionRegistryPostProcessor
-    //而 BeanDefinitionRegistryPostProcessor 最终实现BeanFactoryPostProcessor这个接口
+		//而BeanDefinitionRegistryPostProcessor也继承BeanFactoryPostProcessor这个接口
     RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);
     def.setSource(source);
+    //注册到 spring 容器并封装成BeanDefinitionHolder返回
     beanDefs.add(registerPostProcessor(registry, def, CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME));
   }
 
+  //org.springframework.context.annotation.internalAutowiredAnnotationProcessor
   if (!registry.containsBeanDefinition(AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
     //AutowiredAnnotationBeanPostProcessor 实现了 MergedBeanDefinitionPostProcessor
-    //MergedBeanDefinitionPostProcessor 最终实现了 BeanPostProcessor
+    //MergedBeanDefinitionPostProcessor 也继承了 BeanPostProcessor
     RootBeanDefinition def = new RootBeanDefinition(AutowiredAnnotationBeanPostProcessor.class);
     def.setSource(source);
     beanDefs.add(registerPostProcessor(registry, def, AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME));
@@ -222,6 +227,19 @@ public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
   return beanDefs;
 }
 ```
+
+注册到 spring 容器并封装为BeanDefinitionHolder返回
+
+```java
+private static BeanDefinitionHolder registerPostProcessor(
+  BeanDefinitionRegistry registry, RootBeanDefinition definition, String beanName) {
+
+  definition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+  registry.registerBeanDefinition(beanName, definition);
+  return new BeanDefinitionHolder(definition, beanName);
+}
+```
+
 
 
 
