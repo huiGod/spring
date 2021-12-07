@@ -145,10 +145,12 @@ public class BeanDefinitionReaderUtils {
 			BeanDefinitionHolder definitionHolder, BeanDefinitionRegistry registry)
 			throws BeanDefinitionStoreException {
 
+		//将bean注册到DefaultListableBeanFactory工厂中
 		// Register bean definition under primary name.
 		String beanName = definitionHolder.getBeanName();
 		registry.registerBeanDefinition(beanName, definitionHolder.getBeanDefinition());
 
+		//如果存在别名，同样进行注册
 		// Register aliases for bean name, if any.
 		String[] aliases = definitionHolder.getAliases();
 		if (aliases != null) {
@@ -160,7 +162,7 @@ public class BeanDefinitionReaderUtils {
 
 	/**
 	 * Register the given bean definition with a generated name,
-	 * unique within the given bean factory.
+	 * unique within t	he given bean factory.
 	 * @param definition the bean definition to generate a bean name for
 	 * @param registry the bean factory to register with
 	 * @return the generated bean name

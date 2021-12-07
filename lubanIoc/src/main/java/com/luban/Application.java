@@ -11,7 +11,7 @@ public class Application {
 		AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext(
 				Appconfig.class);
 
-		annotationConfigApplicationContext.refresh();
+		//annotationConfigApplicationContext.refresh();
 
 		Dao dao = (Dao)annotationConfigApplicationContext.getBean("dao");
 		dao.query();

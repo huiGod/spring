@@ -141,6 +141,10 @@ public class AnnotationConfigUtils {
 	 * that this registration was triggered from. May be {@code null}.
 	 * @return a Set of BeanDefinitionHolders, containing all bean definitions
 	 * that have actually been registered by this call
+	 *
+	 * 注册注解相关的 post 处理器，这里都是一些 spring 内置的 BeanDefinition，用来给 spring 工厂提供额外的能力
+	 *
+	 * ConfigurationClassPostProcessor和AutowiredAnnotationBeanPostProcessor是比较重要的
 	 */
 	public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
 			BeanDefinitionRegistry registry, @Nullable Object source) {

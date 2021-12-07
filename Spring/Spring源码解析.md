@@ -1,4 +1,4 @@
-AnnotationConfigApplicationContext实例化过程
+# AnnotationConfigApplicationContext初始化
 
 1. 调用父类GenericApplicationContext初始化出默认工厂实现DefaultListableBeanFactory
 2. 初始化AnnotatedBeanDefinitionReader注解读取器
@@ -103,7 +103,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 }
 ```
 
-构建AnnotatedBeanDefinitionReader对象
+## 构建AnnotatedBeanDefinitionReader对象
 
 ```java
 /**
@@ -137,7 +137,7 @@ public class AnnotatedBeanDefinitionReader {
 }
 ```
 
-注册注解相关的 post 处理器，这里都是一些 spring 内置的 BeanDefinition，用来给 spring 工厂提供额外的能力
+注册注解相关的 post 处理器，这里都是一些 spring 内置的RootBeanDefinition(也是一种BeanDefinition)，用来给 spring 工厂提供额外的能力
 
 ConfigurationClassPostProcessor和AutowiredAnnotationBeanPostProcessor是比较重要的
 
@@ -240,6 +240,122 @@ private static BeanDefinitionHolder registerPostProcessor(
 }
 ```
 
+## 构建ClassPathBeanDefinitionScanner对象
 
+# 通过AnnotationConfigApplicationContext注册bean
 
+AnnotationConfigApplicationContext对象初始化的时候也可以传入一个类的Class对象，进行注册
+
+```java
+public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
+    this();
+    //将制定的类注册到工厂
+    register(annotatedClasses);
+    //触发容器解析注解
+    refresh();
+}
+```
+
+也可以在外部通过AnnotationConfigApplicationContext工厂类调用该方法注册bean，但是后面需要调用refresh去触发容器解析注解
+
+```java
+public void register(Class<?>... annotatedClasses) {
+    Assert.notEmpty(annotatedClasses, "At least one annotated class must be specified");
+    this.reader.register(annotatedClasses);
+}
+```
+
+```java
+public void register(Class<?>... annotatedClasses) {
+    for (Class<?> annotatedClass : annotatedClasses) {
+        registerBean(annotatedClass);
+    }
+}
+```
+
+注册指定的bean到工厂中，并且从注解中解析bean的元数据
+
+```java
+<T> void doRegisterBean(Class<T> annotatedClass, @Nullable Supplier<T> instanceSupplier, @Nullable String name,@Nullable Class<? extends Annotation>[] qualifiers, BeanDefinitionCustomizer... definitionCustomizers) {
+
+    //构建AnnotatedGenericBeanDefinition包含了类的一些元信息比如scope，lazy等等
+    AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(annotatedClass);
+
+    //基于@Conditional注解判断是否需要跳过解析
+    if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
+        return;
+    }
+
+    abd.setInstanceSupplier(instanceSupplier);
+
+    //解析注解上的Scope得到类的作用域
+    ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
+
+    //设置类的作用于
+    abd.setScope(scopeMetadata.getScopeName());
+
+    //beanNameGenerator生成bean的名称，如果有在@component上指定则取该值，否则默认是类名第一个字母小写
+    String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
+
+    //解析Lazy DependsOn Primary Role等等注解，并设置到元数据中
+    AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
+
+    //这里涉及到自动装配
+    if (qualifiers != null) {
+        for (Class<? extends Annotation> qualifier : qualifiers) {
+            //如果配置了@Primary注解，如果加了则作为首选
+            if (Primary.class == qualifier) {
+                abd.setPrimary(true);
+            }
+            //懒加载，前面加过
+            else if (Lazy.class == qualifier) {
+                abd.setLazyInit(true);
+            }
+            else {
+                //如果使用了除@Primary和@Lazy以外的其他注解，则为该Bean添加一个根据名字自动装配的限定符
+                abd.addQualifier(new AutowireCandidateQualifier(qualifier));
+            }
+        }
+    }
+
+    //对BeanDefinition做一些定制化的回调
+    for (BeanDefinitionCustomizer customizer : definitionCustomizers) {
+        customizer.customize(abd);
+    }
+
+    //对BeanDefinition和beanName做一个简单封装
+    BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
+
+    //ScopedProxyMode跟SpringMVC相关
+    definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+
+    //注册到spring工厂中
+    BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
+}
+```
+
+最底层的注册是将BeanDefinition注册到刚开始初始化的DefaultListableBeanFactory中
+
+```java
+public static void registerBeanDefinition(
+    BeanDefinitionHolder definitionHolder, BeanDefinitionRegistry registry)
+    throws BeanDefinitionStoreException {
+
+    //将bean注册到DefaultListableBeanFactory工厂中
+    // Register bean definition under primary name.
+    String beanName = definitionHolder.getBeanName();
+    registry.registerBeanDefinition(beanName, definitionHolder.getBeanDefinition());
+
+    //如果存在别名，同样进行注册
+    // Register aliases for bean name, if any.
+    String[] aliases = definitionHolder.getAliases();
+    if (aliases != null) {
+        for (String alias : aliases) {
+            registry.registerAlias(beanName, alias);
+        }
+    }
+}
+```
+
+# refresh触发容器解析
 
