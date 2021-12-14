@@ -523,6 +523,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 			// Prepare the bean factory for use in this context.
 			//准备工厂的上下文初始化，主要是注册一些BeanPostProcessor
+			//比较重要的是ApplicationContextAwareProcessor，处理给实现了 Aware 接口的类注入属性
 			prepareBeanFactory(beanFactory);
 
 			try {
@@ -533,6 +534,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Invoke factory processors registered as beans in the context.
 				//调用所有的BeanFactoryPostProcessor，包括自定义的和spring内部的
+				//核心的内置ConfigurationClassPostProcessor被调用，用来解析@Configuration 注解，将一些符合条件的 bean 注入到容器中
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.

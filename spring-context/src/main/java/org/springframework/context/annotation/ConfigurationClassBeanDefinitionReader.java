@@ -126,6 +126,7 @@ class ConfigurationClassBeanDefinitionReader {
 	private void loadBeanDefinitionsForConfigurationClass(
 			ConfigurationClass configClass, TrackedConditionEvaluator trackedConditionEvaluator) {
 
+		//不满足@Conditition 注解的类跳过注册
 		if (trackedConditionEvaluator.shouldSkip(configClass)) {
 			String beanName = configClass.getBeanName();
 			if (StringUtils.hasLength(beanName) && this.registry.containsBeanDefinition(beanName)) {
@@ -135,20 +136,19 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
-		//如果一个类是被import的，会被spring标准
-		//早这里完成注册
+		//注册 @Import 导入的普通 bean , 或者 ImportSelector 导入的普通bean
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
-		//@Bean
+		//处理@Bean方法
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
-		 //xml
+		//处理importedResources资源，比如解析 xml 并注册到容器中
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
 
-		//注册Registrar
+		//注册ImportBeanDefinitionRegistrar类型
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 
