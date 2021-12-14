@@ -85,18 +85,16 @@ abstract class ConfigurationClassUtils {
 		}
 
 		AnnotationMetadata metadata;
+		//如果是注解类型的bean通过注解的方式获取bean的元数据
 		if (beanDef instanceof AnnotatedBeanDefinition &&
 				className.equals(((AnnotatedBeanDefinition) beanDef).getMetadata().getClassName())) {
 			// Can reuse the pre-parsed metadata from the given BeanDefinition...
-			//如果BeanDefinition 是 AnnotatedBeanDefinition的实例,并且className 和 BeanDefinition中 的元数据 的类名相同
-			// 则直接从BeanDefinition 获得Metadata
 			metadata = ((AnnotatedBeanDefinition) beanDef).getMetadata();
 		}
+		//如果有beanClass属性，则通过StandardAnnotationMetadata对象方式获取bean的元数据
 		else if (beanDef instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) beanDef).hasBeanClass()) {
 			// Check already loaded Class if present...
 			// since we possibly can't even load the class file for this Class.
-			//如果BeanDefinition 是 AbstractBeanDefinition的实例,并且beanDef 有 beanClass 属性存在
-			//则实例化StandardAnnotationMetadata
 			Class<?> beanClass = ((AbstractBeanDefinition) beanDef).getBeanClass();
 			metadata = new StandardAnnotationMetadata(beanClass, true);
 		}
@@ -113,18 +111,13 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
-		//判断当前这个bd中存在的类是不是加了@Configruation注解
-		//如果存在则spring认为他是一个全注解的类
+		//判断bean是否有@Configuration注解
 		if (isFullConfigurationCandidate(metadata)) {
-			//如果存在Configuration 注解,则为BeanDefinition 设置configurationClass属性为full
+			//如果存在Configuration注解，则为bean设置configurationClass属性为full
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
-		//判断是否加了以下注解，摘录isLiteConfigurationCandidate的源码
-		//     candidateIndicators.add(Component.class.getName());
-		//		candidateIndicators.add(ComponentScan.class.getName());
-		//		candidateIndicators.add(Import.class.getName());
-		//		candidateIndicators.add(ImportResource.class.getName());
-		//如果不存在Configuration注解，spring则认为是一个部分注解类
+
+		//如果bean有Component、ComponentScan、Import、ImportResource或者有@Bean方法则将configurationClass属性设置为lite
 		else if (isLiteConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}

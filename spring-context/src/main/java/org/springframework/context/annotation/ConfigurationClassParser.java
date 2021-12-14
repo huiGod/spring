@@ -162,11 +162,11 @@ class ConfigurationClassParser {
 
 	public void parse(Set<BeanDefinitionHolder> configCandidates) {
 		this.deferredImportSelectors = new LinkedList<>();
-		//根据BeanDefinition 的类型 做不同的处理,一般都会调用ConfigurationClassParser#parse 进行解析
 		for (BeanDefinitionHolder holder : configCandidates) {
 			BeanDefinition bd = holder.getBeanDefinition();
 			//
 			try {
+				//注解类型的bean
 				if (bd instanceof AnnotatedBeanDefinition) {
 					//解析注解对象，并且把解析出来的bd放到map，但是这里的bd指的是普通的
 					//何谓不普通的呢？比如@Bean 和各种beanFactoryPostProcessor得到的bean不在这里put
@@ -189,7 +189,7 @@ class ConfigurationClassParser {
 			}
 		}
 
-		//处理延迟加载的importSelect？为什么要延迟加载，估计就是为了延迟吧
+		//处理延迟加载的importSelect
 		processDeferredImportSelectors();
 	}
 
@@ -222,7 +222,13 @@ class ConfigurationClassParser {
 	}
 
 
+	/**
+	 * 解析配置类型的bean
+	 * @param configClass
+	 * @throws IOException
+	 */
 	protected void processConfigurationClass(ConfigurationClass configClass) throws IOException {
+		//判断@Conditional逻辑
 		if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
 			return;
 		}
@@ -263,16 +269,22 @@ class ConfigurationClassParser {
 	 * @param configClass the configuration class being build
 	 * @param sourceClass a source class
 	 * @return the superclass, or {@code null} if none found or previously processed
+	 *
+	 * 解析配置类
+	 * 1.处理@ComponentScan注解的bean
+	 * 2.将包路径属性下的@Component相关的bean注册到容器中
+	 * 3.处理@import配置
 	 */
 	@Nullable
 	protected final SourceClass doProcessConfigurationClass(ConfigurationClass configClass, SourceClass sourceClass)
 			throws IOException {
 
 		// Recursively process any member (nested) classes first
-		//处理内部类
+		//处理嵌套内部类
 		processMemberClasses(configClass, sourceClass);
 
 		// Process any @PropertySource annotations
+		//处理@PropertySource配置
 		for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), PropertySources.class,
 				org.springframework.context.annotation.PropertySource.class)) {
@@ -285,16 +297,17 @@ class ConfigurationClassParser {
 			}
 		}
 
+		//扫描@Component的普通bean，并进行注册
+
 		// Process any @ComponentScan annotations
+		//处理@ComponentScan注解，进行包扫描，扫描出@Component的bean注册到容器中
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		if (!componentScans.isEmpty() &&
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
-				//扫描普通类=componentScan=com.luban
-				//这里扫描出来所有@@Component
-				//并且把扫描的出来的普通bean放到map当中
+				//扫描@ComponentScan中所配置包路径属性下的所有带@Component注解的bean，并注册到spring容器中
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
@@ -304,7 +317,6 @@ class ConfigurationClassParser {
 					if (bdCand == null) {
 						bdCand = holder.getBeanDefinition();
 					}
-					//检查  todo
 					if (ConfigurationClassUtils.checkConfigurationClassCandidate(bdCand, this.metadataReaderFactory)) {
 						parse(bdCand.getBeanClassName(), holder.getBeanName());
 					}
@@ -312,10 +324,6 @@ class ConfigurationClassParser {
 			}
 		}
 
-		/**
-		 * 上面的代码就是扫描普通类----@Component
-		 * 并且放到了map当中
-		 */
 		// Process any @Import annotations
 		//处理@Import  imports 3种情况
 		//ImportSelector
@@ -334,6 +342,7 @@ class ConfigurationClassParser {
 		 *
 		 *
 		 */
+		//处理@import注解
 		processImports(configClass, sourceClass, getImports(sourceClass), true);
 
 		// Process any @ImportResource annotations

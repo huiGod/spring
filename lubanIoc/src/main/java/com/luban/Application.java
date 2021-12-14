@@ -13,7 +13,7 @@ public class Application {
 
 		//annotationConfigApplicationContext.refresh();
 
-		Dao dao = (Dao)annotationConfigApplicationContext.getBean("dao");
+		Dao dao = annotationConfigApplicationContext.getBean(Dao.class);
 		dao.query();
 	}
 

@@ -214,7 +214,6 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 
 
 	/**
-	 * 手动调用的
 	 * Derive further bean definitions from the configuration classes in the registry.
 	 */
 	@Override
@@ -259,46 +258,41 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	/**
 	 * Build and validate a configuration model based on the registry of
 	 * {@link Configuration} classes.
+	 * 解析@Configuration注解相关的bean
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
-		//定义一个list存放app 提供的bd（项目当中提供了@Compent）
+		//需要解析配置相关的bean
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
-		//获取容器中注册的所有bd名字
-		//7个
+		//此时容器中有内置的bean和手动注册进去的bean
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
-		/**
-		 * Full
-		 * Lite
-		 */
+		//将bean标识为Full/Lite
 		for (String beanName : candidateNames) {
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
+			//如果bean的configurationClass属性为full或者lite,则意味着已经处理过了,直接跳过
 			if (ConfigurationClassUtils.isFullConfigurationClass(beanDef) ||
 					ConfigurationClassUtils.isLiteConfigurationClass(beanDef)) {
-				//果BeanDefinition中的configurationClass属性为full或者lite,则意味着已经处理过了,直接跳过
-				//这里需要结合下面的代码才能理解
 				if (logger.isDebugEnabled()) {
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
-			//判断是否是Configuration类，如果加了Configuration下面的这几个注解就不再判断了
-			// 还有  add(Component.class.getName());
-			//		candidateIndicators.add(ComponentScan.class.getName());
-			//		candidateIndicators.add(Import.class.getName());
-			//		candidateIndicators.add(ImportResource.class.getName());
-			//beanDef == appconfig
+			//扫描包路径下的所有需要解析配置相关的bean
+			//如果bean有@Configuration注解则将configurationClass属性设置为full
+			//或者bean有Component、ComponentScan、Import、ImportResource注解或者有@Bean方法则将configurationClass属性设置为lite
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
-				//BeanDefinitionHolder 也可以看成一个数据结构
+				//符合条件的bean保存到configCandidates集合中
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
 		}
 
 		// Return immediately if no @Configuration classes were found
+		//如果没有配置相关的注解bean则直接返回
+		//这里只会返回@Configuration的bean
 		if (configCandidates.isEmpty()) {
 			return;
 		}
 
-		// 排序，根据order,不重要
+		// 排序
 		// Sort by previously determined @Order value, if applicable
 		configCandidates.sort((bd1, bd2) -> {
 			int i1 = ConfigurationClassUtils.getOrder(bd1.getBeanDefinition());
@@ -308,15 +302,12 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 
 		// Detect any custom bean name generation strategy supplied through the enclosing application context
 		SingletonBeanRegistry sbr = null;
-		//如果BeanDefinitionRegistry是SingletonBeanRegistry子类的话,
-		// 由于我们当前传入的是DefaultListableBeanFactory,是SingletonBeanRegistry 的子类
-		// 因此会将registry强转为SingletonBeanRegistry
+
+		//工厂类生成beanName的策略
 		if (registry instanceof SingletonBeanRegistry) {
 			sbr = (SingletonBeanRegistry) registry;
-			if (!this.localBeanNameGeneratorSet) {//是否有自定义的
+			if (!this.localBeanNameGeneratorSet) {
 				BeanNameGenerator generator = (BeanNameGenerator) sbr.getSingleton(CONFIGURATION_BEAN_NAME_GENERATOR);
-				//SingletonBeanRegistry中有id为 org.springframework.context.annotation.internalConfigurationBeanNameGenerator
-				//如果有则利用他的，否则则是spring默认的
 				if (generator != null) {
 					this.componentScanBeanNameGenerator = generator;
 					this.importBeanNameGenerator = generator;
@@ -329,17 +320,17 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		}
 
 		// Parse each @Configuration class
-		//实例化ConfigurationClassParser 为了解析各个配置类
+		//解析配置类组件
 		ConfigurationClassParser parser = new ConfigurationClassParser(
 				this.metadataReaderFactory, this.problemReporter, this.environment,
 				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
 
-		//实例化2个set,candidates用于将之前加入的configCandidates进行去重
-		//因为可能有多个配置类重复了
-		//alreadyParsed用于判断是否处理过
+		//配置注解相关的bean
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
+		//已经解析的bean
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
+			//解析配置bean
 			parser.parse(candidates);
 			parser.validate();
 			//map.keyset
