@@ -75,10 +75,9 @@ class ConfigurationClassEnhancer {
 
 	// The callbacks to use. Note that these callbacks must be stateless.
 	private static final Callback[] CALLBACKS = new Callback[] {
-			//增强方法，主要空bean的作用域
-			//不每一次都去调用new
+			//增强方法，主要控制bean的作用域，不用每一次都去调用new
 			new BeanMethodInterceptor(),
-			//设置一个beanFactory
+			//设置一个$$beanFactory字段，用于获取工厂对象
 			new BeanFactoryAwareMethodInterceptor(),
 			NoOp.INSTANCE
 	};
@@ -384,9 +383,11 @@ class ConfigurationClassEnhancer {
 									"these container lifecycle issues; see @Bean javadoc for complete details.",
 							beanMethod.getDeclaringClass().getSimpleName(), beanMethod.getName()));
 				}
+				//需要new对象，则调用父类方法
 				return cglibMethodProxy.invokeSuper(enhancedConfigInstance, beanMethodArgs);
 			}
 
+			//否则不需要创建，直接从容器中获取
 			return resolveBeanReference(beanMethod, beanMethodArgs, beanFactory, beanName);
 		}
 
