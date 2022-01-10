@@ -349,10 +349,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	@Override
 	public <T> T getBean(Class<T> requiredType, @Nullable Object... args) throws BeansException {
 		//NamedBeanHolder 可以理解为一个数据结构和map差不多，里面就是存了bean的名字和bean的实例
-		//这个类的注释可以点开查看
 		//A simple holder for a given bean name plus bean instance
-		//一个简单的bean和名字的容器
-		//通过resolveNamedBean方法得到这个holder，故而需要看这个resolveNamedBean方法如何得到这个holder的
 		NamedBeanHolder<T> namedBean = resolveNamedBean(requiredType, args);
 		if (namedBean != null) {
 			return namedBean.getBeanInstance();
@@ -747,17 +744,19 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		if (logger.isDebugEnabled()) {
 			logger.debug("Pre-instantiating singletons in " + this);
 		}
-		//所有bean的名字
+		//获取容器内加载的所有BeanDefinition
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
-		// 触发所有非延迟加载单例beans的初始化，主要步骤为调用getBean
 		for (String beanName : beanNames) {
 			//合并父BeanDefinition
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			//非抽象、单例、非延迟加载的bean进行初始化，则开始创建单例对象通过调用getBean(beanName)方法初始化
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				// 判断当前Bean是否实现了FactoryBean接口，如果实现了，判断是否要立即初始化
+				// 判断是否需要立即初始化，根据Bean是否实现了SmartFactoryBean并且重写的内部方法isEagerInit放回true
 				if (isFactoryBean(beanName)) {
 					//如果是FactoryBean则加上&
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
@@ -1016,10 +1015,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	@Nullable
 	private <T> NamedBeanHolder<T> resolveNamedBean(Class<T> requiredType, @Nullable Object... args) throws BeansException {
 		Assert.notNull(requiredType, "Required type must not be null");
+		//获取容器中指定类型的bean名称
 		String[] candidateNames = getBeanNamesForType(requiredType);
-		/**
-		 * 得到对象的名字，因为对象可能有别名故而需要处理别名
-		 */
 		if (candidateNames.length > 1) {
 			List<String> autowireCandidates = new ArrayList<>(candidateNames.length);
 			for (String beanName : candidateNames) {

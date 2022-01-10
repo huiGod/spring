@@ -177,9 +177,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
-		//从map中获取bean如果不为空直接返回，不再进行初始化工作
-		//讲道理一个程序员提供的对象这里一般都是为空的
+		//双重判定从缓存中获取
 		Object singletonObject = this.singletonObjects.get(beanName);
+		//首次初始化singletonObject时空，isSingletonCurrentlyInCreation为false（并没有在创建中）
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			synchronized (this.singletonObjects) {
 				singletonObject = this.earlySingletonObjects.get(beanName);
@@ -206,6 +206,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(beanName, "Bean name must not be null");
+		//双重判定从缓存中获取
 		synchronized (this.singletonObjects) {
 			Object singletonObject = this.singletonObjects.get(beanName);
 			if (singletonObject == null) {
@@ -217,10 +218,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (logger.isDebugEnabled()) {
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
-				/**
-				 * 将beanName添加到singletonsCurrentlyInCreation这样一个set集合中
-				 * 表示beanName对应的bean正在创建中
-				 */
+				//创建前置检查，默认实现是记录当前beanName正在注册中
+				//添加到singletonsCurrentlyInCreation集合中表示正在创建的对象，这个集合会被之前getSingleton方法解决循环引用的地方使用
 				beforeSingletonCreation(beanName);
 				boolean newSingleton = false;
 				boolean recordSuppressedExceptions = (this.suppressedExceptions == null);
@@ -228,6 +227,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
 				try {
+					// 调用签名定义的内部类进行创建，内部调用了createBean(String beanName, RootBeanDefinition mbd, Object[] args)
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
 				}
@@ -251,7 +251,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					if (recordSuppressedExceptions) {
 						this.suppressedExceptions = null;
 					}
-					//把标识为正在创建的标识去掉
+					// 创建前置检查，默认实现是移除当前beanName正在注册状态的记录
+					// 对象创建完成后从singletonsCurrentlyInCreation集合中移除
 					afterSingletonCreation(beanName);
 				}
 				if (newSingleton) {

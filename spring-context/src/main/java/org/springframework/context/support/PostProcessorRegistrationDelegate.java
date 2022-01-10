@@ -234,6 +234,8 @@ final class PostProcessorRegistrationDelegate {
 		List<BeanPostProcessor> internalPostProcessors = new ArrayList<>();
 		List<String> orderedPostProcessorNames = new ArrayList<>();
 		List<String> nonOrderedPostProcessorNames = new ArrayList<>();
+		//将容器中所有的BeanPostProcessor类型bean都获取出来，放入到容器中来维护
+		//优先处理实现了PriorityOrdered接口的类，再按照实现了Ordered接口排序的类，最后处理普通的类
 		for (String ppName : postProcessorNames) {
 			if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
 				BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
