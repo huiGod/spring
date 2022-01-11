@@ -335,6 +335,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 				// Create bean instance.
 				//开始创建对象
+				//如果是单例对象，则优先从缓存中获取对象，不存在则创建并放入缓存中
+				//如果是多例对象，则每次都创建新的对象返回
 				if (mbd.isSingleton()) {
 					//会先尝试从缓存中获取，获取失败就通过ObjectFactory的createBean方法创建
 					sharedInstance = getSingleton(beanName, () -> {

@@ -108,6 +108,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner,
 			final Constructor<?> ctor, @Nullable Object... args) {
 
+		//如果不存在 lookup-override或者replace-override属性的话，直接通过构造函数和参数进行实例化
 		if (!bd.hasMethodOverrides()) {
 			if (System.getSecurityManager() != null) {
 				// use own privileged to change accessibility (when security is on)
@@ -116,9 +117,11 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 					return null;
 				});
 			}
+			//反射方式创建
 			return (args != null ? BeanUtils.instantiateClass(ctor, args) : BeanUtils.instantiateClass(ctor));
 		}
 		else {
+			//因为使用了lookup-override或者replace-override功能的话，就需要通过动态代理来创建bean
 			return instantiateWithMethodInjection(bd, beanName, owner, ctor, args);
 		}
 	}
