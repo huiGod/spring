@@ -78,6 +78,15 @@ public class InjectionMetadata {
 		this.checkedElements = checkedElements;
 	}
 
+	/**
+	 * 遍历所有元素，调用元素的 inject 方法。针对属性和方法，保存的类型分别是 AutowiredFieldElement、AutowiredMethodElement
+	 * 在 findAutowiringMetadata 中添加的注入元素的顺序先添加属性元素，再添加方法元素。
+	 * 那么在 InjectionMetadata#inject 的遍历中也是先遍历属性元素，再遍历方法元素。那么就可以知道，方法注入的优先级要高于属性注入，因为方法注入在属性注入后，会将属性注入的结果覆盖掉
+	 * @param target
+	 * @param beanName
+	 * @param pvs
+	 * @throws Throwable
+	 */
 	public void inject(Object target, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
 		Collection<InjectedElement> checkedElements = this.checkedElements;
 		Collection<InjectedElement> elementsToIterate =
