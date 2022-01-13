@@ -1362,7 +1362,6 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// 如果设置了相关的依赖装配方式，会遍历Bean中的属性，根据类型或名称来完成相应注入，无需额外配置
 		if (mbd.getResolvedAutowireMode() == AUTOWIRE_BY_NAME || mbd.getResolvedAutowireMode() == AUTOWIRE_BY_TYPE) {
 
-			// 深拷贝当前已有的配置
 			MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
 			// Add property values based on autowire by name if applicable.
 			// 根据名称进行注入
@@ -1397,6 +1396,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					//AutowiredAnnotationBeanPostProcessor 完成了 Spring基本的属性注入功能(@Autowired、@Value 、@Inject 注解功能)
 					if (bp instanceof InstantiationAwareBeanPostProcessor) {
 						InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
+						//如果属性有家@Autowire 注解，则 AutowireAnnotationBeanPostProcessor 后置处理器会进行属性注入。
+						//如果经过了上述 autowireByName或者 autowireByType 方法后，pvs 不为空，则在这里会再次进行一次属性注入，相当于覆盖了这里的属性注入
 						pvs = ibp.postProcessPropertyValues(pvs, filteredPds, bw.getWrappedInstance(), beanName);
 						if (pvs == null) {
 							return;
@@ -1428,11 +1429,16 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	protected void autowireByName(
 			String beanName, AbstractBeanDefinition mbd, BeanWrapper bw, MutablePropertyValues pvs) {
 
+		// 根据bw的PropertyDescriptors，遍历出所有可写的（即set方法存在)方法，存在于BeanDefinition里的PropertyValues，且不是简单属性的属性名
+		// 这里获取的是 set 开头方法的方法名作为属性名称
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {
 			if (containsBean(propertyName)) {
+				// 递归初始化相关Bean
 				Object bean = getBean(propertyName);
+				// 根据名称添加到pvs中
 				pvs.add(propertyName, bean);
+				// 注册依赖关系
 				registerDependentBean(propertyName, beanName);
 				if (logger.isDebugEnabled()) {
 					logger.debug("Added autowiring by name from bean name '" + beanName +
@@ -1462,28 +1468,39 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	protected void autowireByType(
 			String beanName, AbstractBeanDefinition mbd, BeanWrapper bw, MutablePropertyValues pvs) {
 
+		// 获取类型转换器
 		TypeConverter converter = getCustomTypeConverter();
 		if (converter == null) {
 			converter = bw;
 		}
 
 		Set<String> autowiredBeanNames = new LinkedHashSet<>(4);
+		// 根据bw的PropertyDescriptors，遍历出所有可写的（即set方法存在)方法，存在于BeanDefinition里的PropertyValues，且不是简单属性的属性名
+		// 这里获取的是 set 开头方法的方法名作为属性名称
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
 		for (String propertyName : propertyNames) {
 			try {
 				PropertyDescriptor pd = bw.getPropertyDescriptor(propertyName);
 				// Don't try autowiring by type for type Object: never makes sense,
 				// even if it technically is a unsatisfied, non-simple property.
+				//如果是Object类型不进行装配
 				if (Object.class != pd.getPropertyType()) {
+					// 获取相关的写方法参数
 					MethodParameter methodParam = BeanUtils.getWriteMethodParameter(pd);
 					// Do not allow eager init for type matching in case of a prioritized post-processor.
+					// 定义是否允许懒加载
 					boolean eager = !PriorityOrdered.class.isInstance(bw.getWrappedInstance());
 					DependencyDescriptor desc = new AutowireByTypeDependencyDescriptor(methodParam, eager);
+
+					// 这里会根据传入desc里的入参类型，作为依赖装配的类型
+					// 再根据这个类型在BeanFacoty中查找所有类或其父类相同的BeanName
+					// 最后根据BeanName获取或初始化相应的类，然后将所有满足条件的BeanName填充到autowiredBeanNames中。
 					Object autowiredArgument = resolveDependency(desc, beanName, autowiredBeanNames, converter);
 					if (autowiredArgument != null) {
 						pvs.add(propertyName, autowiredArgument);
 					}
 					for (String autowiredBeanName : autowiredBeanNames) {
+						// 注册依赖
 						registerDependentBean(autowiredBeanName, beanName);
 						if (logger.isDebugEnabled()) {
 							logger.debug("Autowiring by type from bean name '" + beanName + "' via property '" +
