@@ -1396,7 +1396,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					//AutowiredAnnotationBeanPostProcessor 完成了 Spring基本的属性注入功能(@Autowired、@Value 、@Inject 注解功能)
 					if (bp instanceof InstantiationAwareBeanPostProcessor) {
 						InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
-						//如果属性有家@Autowire 注解，则 AutowireAnnotationBeanPostProcessor 后置处理器会进行属性注入。
+						//如果属性有加@Autowire 注解，则 AutowireAnnotationBeanPostProcessor 后置处理器会进行属性注入。
 						//如果经过了上述 autowireByName或者 autowireByType 方法后，pvs 不为空，则在这里会再次进行一次属性注入，相当于覆盖了这里的属性注入
 						pvs = ibp.postProcessPropertyValues(pvs, filteredPds, bw.getWrappedInstance(), beanName);
 						if (pvs == null) {
