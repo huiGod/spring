@@ -1753,7 +1753,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * @see #invokeInitMethods
 	 * @see #applyBeanPostProcessorsAfterInitialization
 	 *
-	 * 1.若实现了BeanNameAware， BeanClassLoaderAware，BeanFactoryAwareAware等接口，则注入相关对象
+	 * 1.如果实现了BeanNameAware， BeanClassLoaderAware，BeanFactoryAwareAware等接口，则注入相关对象
 	 * 2.遍历后置处理器，调用实现的postProcessBeforeInitialization方法
 	 * 3.如果实现了initialzingBean，调用实现的 afterPropertiesSet()
 	 * 4.如果配置了init-mothod，调用相应的init方法

@@ -1118,6 +1118,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				return multipleBeans;
 			}
 
+			//根据类型从容器中查找 bean对象
 			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
 			if (matchingBeans.isEmpty()) {
 				if (isRequired(descriptor)) {
@@ -1130,6 +1131,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			Object instanceCandidate;
 
 			if (matchingBeans.size() > 1) {
+				//如果从容器中找到多个实例对象，则判断是否有@Primary 或者@Priority
+				//或者属性名等于bean实例名
 				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
 				if (autowiredBeanName == null) {
 					if (isRequired(descriptor) || !indicatesMultipleBeans(type)) {
@@ -1145,6 +1148,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				instanceCandidate = matchingBeans.get(autowiredBeanName);
 			}
 			else {
+				//如果只有一个符合类型的 bean 对象，则直接返回
 				// We have exactly one match.
 				Map.Entry<String, Object> entry = matchingBeans.entrySet().iterator().next();
 				autowiredBeanName = entry.getKey();
@@ -1293,6 +1297,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	protected Map<String, Object> findAutowireCandidates(
 			@Nullable String beanName, Class<?> requiredType, DependencyDescriptor descriptor) {
 
+		//从容器中找到与类型匹配的 bean 名称
 		String[] candidateNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 				this, requiredType, true, descriptor.isEager());
 		Map<String, Object> result = new LinkedHashMap<>(candidateNames.length);
@@ -1307,6 +1312,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 		}
 		for (String candidate : candidateNames) {
+			//处理@Qualifiler注解，通过 byName 来处理
 			if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, descriptor)) {
 				addCandidateEntry(result, candidate, descriptor, requiredType);
 			}
@@ -1331,6 +1337,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 		}
+		//返回符合要求的实例对象
 		return result;
 	}
 
