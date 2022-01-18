@@ -482,7 +482,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			// 在 bean 初始化前给BeanPostProcessors后置处理器一个机会来直接返回对象
+			// 在 bean 实例化创建前前给BeanPostProcessors后置处理器一个机会来直接返回对象
 			// 如果后置处理器返回的 bean 不为空，则直接返回，不需要处理后续创建对象流程
 			// 如果是AOP代理则在这里创建对象
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.

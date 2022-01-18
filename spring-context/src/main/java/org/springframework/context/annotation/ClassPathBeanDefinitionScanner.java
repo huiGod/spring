@@ -250,10 +250,12 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	public int scan(String... basePackages) {
 		int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
 
+		//扫描指定路径下的bean
 		doScan(basePackages);
 
 		// Register annotation config processors, if necessary.
 		if (this.includeAnnotationConfig) {
+			//注册spring内置的后置处理器，提供额外的解析能力
 			AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 		}
 
@@ -272,7 +274,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
-			//扫描basePackage路径下的java文件，将带@Component/@Repository/@Service/@Controller注解的类组装成 bean并注册到容器中
+			//扫描basePackage路径下的java文件，将带@Component、@Repository、@Service、@Controller注解的类组装成 bean并注册到容器中
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 
 

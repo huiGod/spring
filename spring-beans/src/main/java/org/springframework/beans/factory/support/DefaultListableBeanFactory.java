@@ -795,6 +795,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 					}, getAccessControlContext());
 				}
 				else {
+					//执行实例化后的回调
 					smartSingleton.afterSingletonsInstantiated();
 				}
 			}

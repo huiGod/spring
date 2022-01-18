@@ -256,6 +256,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					afterSingletonCreation(beanName);
 				}
 				if (newSingleton) {
+					//对象创建成功后从维护相关集合
 					addSingleton(beanName, singletonObject);
 				}
 			}
