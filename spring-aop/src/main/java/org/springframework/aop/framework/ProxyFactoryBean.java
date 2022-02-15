@@ -97,6 +97,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	/**
 	 * This suffix in a value in an interceptor list indicates to expand globals.
 	 */
+	// 标记通知器的为全局通知器
 	public static final String GLOBAL_SUFFIX = "*";
 
 
@@ -112,6 +113,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 
 	private boolean singleton = true;
 
+	// 实际上是：new DefaultAdvisorAdapterRegistry();Advisor适配器注册，将Advice适配成Advisor
 	private AdvisorAdapterRegistry advisorAdapterRegistry = GlobalAdvisorAdapterRegistry.getInstance();
 
 	private boolean freezeProxy = false;
@@ -245,11 +247,15 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	 * The instance will be cached for a singleton, and create on each call to
 	 * {@code getObject()} for a proxy.
 	 * @return a fresh AOP proxy reflecting the current state of this factory
+	 *
+	 * 创建AOPProxy代理对象的入口
 	 */
 	@Override
 	@Nullable
 	public Object getObject() throws BeansException {
+		// 初始化通知器链
 		initializeAdvisorChain();
+		// 处理单例和原型
 		if (isSingleton()) {
 			return getSingletonInstance();
 		}
@@ -315,18 +321,26 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	 * @return the shared singleton proxy
 	 */
 	private synchronized Object getSingletonInstance() {
+		// singletonInstance 没有缓存单例代理对象，则创建，否则直接返回
 		if (this.singletonInstance == null) {
+			// 获取要代理的目标源
 			this.targetSource = freshTargetSource();
+			// 如果ProxyFactoryBean设置了自动探测接口属性（默认为True），且没有配置代理接口，且不是目标类的直接代理（ProxyConfig中默认为false）
 			if (this.autodetectInterfaces && getProxiedInterfaces().length == 0 && !isProxyTargetClass()) {
 				// Rely on AOP infrastructure to tell us what interfaces to proxy.
+				// 获取要代理对象的目标类
 				Class<?> targetClass = getTargetClass();
 				if (targetClass == null) {
 					throw new FactoryBeanNotInitializedException("Cannot determine target class for proxy");
 				}
+				// 获取目标类的接口
 				setInterfaces(ClassUtils.getAllInterfacesForClass(targetClass, this.proxyClassLoader));
 			}
 			// Initialize the shared singleton instance.
+			//初始化共享的单例对象
+			// 设置是否使用ProxyConfig的默认配置：false，默认使用
 			super.setFrozen(this.freezeProxy);
+			// 创建AopProxy对象
 			this.singletonInstance = getProxy(createAopProxy());
 		}
 		return this.singletonInstance;
@@ -346,12 +360,16 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 			logger.trace("Creating copy of prototype ProxyFactoryBean config: " + this);
 		}
 
+		// 根据当前的工厂类，创建一个代理生成辅助类
 		ProxyCreatorSupport copy = new ProxyCreatorSupport(getAopProxyFactory());
 		// The copy needs a fresh advisor chain, and a fresh TargetSource.
+		// 辅助类需要一个新的通知器链和一个新的目标源
 		TargetSource targetSource = freshTargetSource();
+		// 代理生成辅助类，复制当前代理生成类的配置，新的目标源和通知器链
 		copy.copyConfigurationFrom(this, targetSource, freshAdvisorChain());
 		if (this.autodetectInterfaces && getProxiedInterfaces().length == 0 && !isProxyTargetClass()) {
 			// Rely on AOP infrastructure to tell us what interfaces to proxy.
+			// 辅助类，设置接口
 			Class<?> targetClass = targetSource.getTargetClass();
 			if (targetClass != null) {
 				copy.setInterfaces(ClassUtils.getAllInterfacesForClass(targetClass, this.proxyClassLoader));
@@ -362,6 +380,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 		if (logger.isTraceEnabled()) {
 			logger.trace("Using ProxyCreatorSupport copy: " + copy);
 		}
+		// 通过辅助类创建代理对象，由此可见，每次原型的代理类，都是创建了一个新的copy
 		return getProxy(copy.createAopProxy());
 	}
 
@@ -431,10 +450,12 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	 * are unaffected by such changes.
 	 */
 	private synchronized void initializeAdvisorChain() throws AopConfigException, BeansException {
+		// 如果通知器链已经初始化，直接返回
 		if (this.advisorChainInitialized) {
 			return;
 		}
 
+		// 如果配置的拦截器名称存在
 		if (!ObjectUtils.isEmpty(this.interceptorNames)) {
 			if (this.beanFactory == null) {
 				throw new IllegalStateException("No BeanFactory available anymore (probably due to serialization) " +
@@ -448,23 +469,27 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 			}
 
 			// Materialize interceptor chain from bean names.
+			// 遍历通知器链名称
 			for (String name : this.interceptorNames) {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Configuring advisor or advice '" + name + "'");
 				}
 
+				// 如果通知器是全局的，即名称以*结尾
 				if (name.endsWith(GLOBAL_SUFFIX)) {
 					if (!(this.beanFactory instanceof ListableBeanFactory)) {
 						throw new AopConfigException(
 								"Can only use global advisors or interceptors with a ListableBeanFactory");
 					}
+					// 向容器中添加全局通知器
 					addGlobalAdvisor((ListableBeanFactory) this.beanFactory,
 							name.substring(0, name.length() - GLOBAL_SUFFIX.length()));
 				}
-
+				// 否则，不是全局的
 				else {
 					// If we get here, we need to add a named interceptor.
 					// We must check if it's a singleton or prototype.
+					// 判断 通知器是否为单例
 					Object advice;
 					if (this.singleton || this.beanFactory.isSingleton(name)) {
 						// Add the real Advisor/Advice to the chain.
@@ -473,8 +498,11 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 					else {
 						// It's a prototype Advice or Advisor: replace with a prototype.
 						// Avoid unnecessary creation of prototype bean just for advisor chain initialization.
+						// 如果是原型的 Advice or Advisor: 创建新的
+						// 避免通知器链初始化时没有必要的对象创建
 						advice = new PrototypePlaceholderAdvisor(name);
 					}
+					// 将Advice or Advisor添加的链中
 					addAdvisorOnChainCreation(advice, name);
 				}
 			}
@@ -557,10 +585,12 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	private void addAdvisorOnChainCreation(Object next, String name) {
 		// We need to convert to an Advisor if necessary so that our source reference
 		// matches what we find from superclass interceptors.
+		// 将提供的Advice、advisor转换为Advisor，以便匹配超类
 		Advisor advisor = namedBeanToAdvisor(next);
 		if (logger.isTraceEnabled()) {
 			logger.trace("Adding advisor with name '" + name + "'");
 		}
+		// 加入到通知器链中
 		addAdvisor(advisor);
 	}
 
@@ -596,9 +626,11 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	 */
 	private Advisor namedBeanToAdvisor(Object next) {
 		try {
+			// 将提供的Advice、Advisor包装成Advisor通知器
 			return this.advisorAdapterRegistry.wrap(next);
 		}
 		catch (UnknownAdviceTypeException ex) {
+			// 如果提供的不是 Advisor or Advice, 抛出异常
 			// We expected this to be an Advisor or Advice,
 			// but it wasn't. This is a configuration error.
 			throw new AopConfigException("Unknown advisor type " + next.getClass() +
